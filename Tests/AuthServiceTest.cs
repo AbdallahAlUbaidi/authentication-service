@@ -1,5 +1,6 @@
 namespace Tests;
 
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Core.Auth;
 using Infrastructure;
@@ -73,3 +74,62 @@ public class AuthServiceRegisterTest
     }
 }
 
+public class AuthServiceLoginTest
+{
+    private readonly AuthService Service;
+    private readonly FakeUserRepository FakeUserRepository;
+
+    private readonly FakePasswordHasher FakePasswordHasher;
+
+    public AuthServiceLoginTest()
+    {
+        FakeUserRepository = new();
+        FakePasswordHasher = new();
+        Service = new AuthService(FakeUserRepository, FakePasswordHasher);
+    }
+
+    [Fact]
+    public async void GivenThatUserDoesNotExists_ItShouldThrowInvalidCredentialsException()
+    {
+        //Act
+        Func<Task<User>> act = async () => await Service.Login(new("Abdullah", "1234Aa"));
+
+        //Assert
+        await act.Should().ThrowAsync<InvalidCredentialException>();
+    }
+
+    [Fact]
+    public async void GivenThatTheUserExists_ItShouldReturnTheUser()
+    {
+        //Arrange
+        string username = "Abdullah";
+        string password = "123123Aa";
+        User existingUser = new(username, $"${password}$");
+        await FakeUserRepository.Save(existingUser);
+
+        //Act
+        User user = await Service.Login(new(username, password));
+
+        //Assert
+        user.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async void GivenThatTheUserExistsButPasswordIsInvalid_ItShouldThrowInvalidCredentialsError()
+    {
+        //Arrange
+        string username = "Abdullah";
+        string password = "123123Aa";
+        string invalidPassword = "123123Bb";
+        User existingUser = new(username, $"${password}$");
+        await FakeUserRepository.Save(existingUser);
+
+        //Act   
+        Func<Task<User>> act = async () => await Service.Login(new(username, invalidPassword));
+
+        //Assert
+        await act.Should().ThrowAsync<InvalidCredentialException>();
+
+    }
+
+}

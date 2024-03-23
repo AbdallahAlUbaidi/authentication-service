@@ -5,9 +5,17 @@ public class AuthService(IUserRepository userRepository, IPasswordHasher passwor
 	private readonly IUserRepository _UserRepository = userRepository;
 	private readonly IPasswordHasher _PasswordHasher = passwordHasher;
 
-	public Task<User> Login(LoginInput input)
+	public async Task<User> Login(LoginInput input)
 	{
-		throw new NotImplementedException();
+		User? user = await _UserRepository.GetUserByName(input.Username)
+		?? throw new InvalidCredentialException();
+
+		bool isPasswordValid = _PasswordHasher.Compare(input.Password, user.Password);
+
+		if (!isPasswordValid)
+			throw new InvalidCredentialException();
+
+		return user;
 	}
 
 	public async Task<User> Register(RegisterInput input)
